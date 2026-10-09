@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telão da Sala de Espera (TV) — IAINGP</title>
+  <meta name="description" content="Transmissão em tempo real das chamadas da sala de espera do IAINGP com sinal sonoro e voz." />
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <meta property="og:title" content="Telão da Sala de Espera (TV) — IAINGP" />
+  <meta property="og:description" content="Transmissão em tempo real das chamadas da sala de espera do IAINGP com sinal sonoro e voz." />
+  <meta property="og:image" content="assets/logo.png" />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#081d42" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      /* Cores Oficiais do Instituto IAINGP */
+      --navy: #081d42;
+      --navy-light: #0f2b5c;
+      --blue: #1a6fa8;
+      --green: #008f45;
+      --green-light: #e6f7ee;
+      --red: #dc2626;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --amber-border: #fde68a;
+      
+      /* Fundo Branco Clínico */
+      --bg: #ffffff;
+      --bg-card: #f8fafc;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --text: #081d42;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body {
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden; /* Garante que caiba 100% na TV sem rolagem */
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      position: relative;
+    }
+
+    /* ── MARCA D'ÁGUA DA LOGO NO FUNDO ── */
+    .watermark-bg {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(580px, 50vw);
+      max-height: 50vh;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .watermark-bg img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      filter: grayscale(10%);
+    }
+
+    /* ── CABEÇALHO COMPACTO E LIMPO ── */
+    header {
+      background: #ffffff;
+      border-bottom: 1.5px solid var(--border);
+      padding: 0.55rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 10;
+      flex-shrink: 0;
+      height: 62px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-img {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    .brand-sub {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .clock-box {
+      text-align: right;
+    }
+
+    .clock-time {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1;
+      letter-spacing: 0.5px;
+    }
+
+    .clock-date {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: capitalize;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    /* Controles discretos no canto da TV */
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 6px;
+    }
+
+    .btn-ctrl {
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      color: var(--text-muted);
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .btn-ctrl:hover {
+      background: #f1f5f9;
+      color: var(--navy);
+      border-color: var(--blue);
+    }
+
+    .btn-ctrl.btn-chamar {
+      background: var(--navy);
+      color: #ffffff;
+      border-color: var(--navy);
+    }
+
+    .btn-ctrl.btn-chamar:hover {
+      background: var(--blue);
+    }
+
+    /* ── ÁREA PRINCIPAL DA TV (TELA CHEIA SEM ROLAGEM) ── */
+    main {
+      flex: 1;
+      min-height: 0;
+      padding: 1.1rem 2.5rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      max-width: 1750px;
+      width: 100%;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    /* ── PALCO DA CHAMADA ATIVA (NOME GIGANTE EM DESTAQUE) ── */
+    .call-stage {
+      background: #ffffff;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 1.4rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 6px 25px rgba(8, 29, 66, 0.04);
+      position: relative;
+      transition: all 0.3s ease;
+      flex: 1.25; /* Maior área dedicada ao paciente chamado */
+      min-height: 0;
+    }
+
+    /* Alerta visual ao chamar paciente */
+    .call-stage.flash {
+      animation: alertFlash 1.6s ease;
+      border-color: var(--red) !important;
+      box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.2), 0 15px 40px rgba(220, 38, 38, 0.15) !important;
+    }
+
+    @keyframes alertFlash {
+      0% { background: #fee2e2; }
+      50% { background: #ffffff; }
+      75% { background: #fee2e2; }
+      100% { background: #ffffff; }
+    }
+
+    .call-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 0.6rem;
+    }
+
+    .badge-chamando {
+      background: var(--red);
+      color: #ffffff;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 16px;
+      border-radius: 6px;
+    }
+
+    .badge-prio {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid var(--amber-border);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 6px;
+    }
+
+    /* NOME DO PACIENTE AUMENTADO PARA MÁXIMA VISIBILIDADE NA TV */
+    .patient-name-display {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(3.8rem, 8.5vw, 6.8rem);
+      font-weight: 900;
+      color: var(--navy);
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      max-width: 1550px;
+      word-break: break-word;
+      margin-bottom: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .call-room-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green-light);
+      border: 1.5px solid #bbf7d0;
+      padding: 8px 28px;
+      border-radius: 50px;
+      flex-shrink: 0;
+    }
+
+    .call-room-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green);
+    }
+
+    .call-room-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+      font-weight: 900;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    /* ── GRID INFERIOR (COMPACTO PARA CABER 100% NA TV) ── */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 1.25rem;
+      flex: 0.95;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    @media (max-width: 950px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    .card-section {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 1rem 1.4rem;
+      box-shadow: 0 4px 15px rgba(8, 29, 66, 0.02);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 0.65rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.45rem;
+      flex-shrink: 0;
+    }
+
+    .card-count-tag {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Lista dos Próximos compacta */
+    .queue-clean-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .queue-clean-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0.55rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .queue-clean-item.prio {
+      border-left: 4px solid var(--amber);
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+    }
+
+    .queue-clean-item.normal {
+      border-left: 4px solid var(--blue);
+    }
+
+    .queue-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .queue-item-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--blue);
+      min-width: 26px;
+    }
+
+    .queue-item-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--navy);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .queue-item-prio-tag {
+      font-size: 0.68rem;
+      font-weight: 800;
+      background: #fef3c7;
+      color: var(--amber);
+      border: 1px solid #fde68a;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* Card do Último 1 Chamado compacto */
+    .last-called-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-left: 5px solid var(--navy);
+      border-radius: 12px;
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .last-called-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .last-called-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: var(--navy);
+      text-transform: uppercase;
+      word-break: break-word;
+      line-height: 1.15;
+    }
+
+    .last-called-room {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--green);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MARCA D'ÁGUA DA LOGO NO FUNDO -->
+  <div class="watermark-bg" aria-hidden="true">
+    <img src="assets/logo.png" alt="Marca d'água IAINGP" />
+  </div>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <a href="index.html" class="brand-wrap" style="text-decoration:none; color:inherit;" title="Voltar ao Portal Principal">
+      <img src="assets/logo.png" alt="Logo IAINGP" class="brand-logo-img" />
+      <div>
+        <div class="brand-title">IAINGP</div>
+        <div class="brand-sub">Instituto de Assistência Integrada Nazareno Gabriel Pereira</div>
+      </div>
+    </a>
+
+    <div class="header-right">
+      <div class="clock-box">
+        <div class="clock-time" id="live-clock">00:00:00</div>
+        <div class="clock-date" id="live-date">Carregando data...</div>
+      </div>
+
+      <div class="ctrl-group">
+        <button class="btn-ctrl btn-chamar" onclick="chamarProximoDaFila()" title="Chamar Próximo">📢 Chamar Próximo</button>
+        <button class="btn-ctrl" id="btn-toggle-sound" onclick="toggleSound()" title="Alternar Som"><span id="sound-icon">🔊</span></button>
+        <button class="btn-ctrl" id="btn-toggle-voice" onclick="toggleVoice()" title="Alternar Voz"><span id="voice-icon">🗣️</span></button>
+        <button class="btn-ctrl" onclick="toggleFullscreen()" title="Tela Cheia (F11)">⛶</button>
+        <a href="dashboard.html" class="btn-ctrl" title="Painel da Recepção">Recepção</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL DA TV -->
+  <main>
+    <!-- PALCO DA CHAMADA EM DESTAQUE (APENAS O NOME E SALA) -->
+    <section class="call-stage" id="call-stage-card">
+      <div class="call-header">
+        <span class="badge-chamando">CHAMANDO AGORA</span>
+        <span id="disp-prioridade-badge" class="badge-prio" style="display:none">ATENDIMENTO PRIORITÁRIO</span>
+      </div>
+
+      <h1 class="patient-name-display" id="disp-patient-name">AGUARDANDO CHAMADA</h1>
+
+      <div class="call-room-box">
+        <span class="call-room-label">Dirija-se ao:</span>
+        <span class="call-room-value" id="disp-consultorio">Consultório 01</span>
+      </div>
+    </section>
+
+    <!-- INFERIOR: PRÓXIMOS PACIENTES & ÚLTIMO 1 CHAMADO -->
+    <div class="bottom-grid">
+      <!-- PRÓXIMOS PACIENTES -->
+      <section class="card-section">
+        <div class="card-title">
+          <span>Próximos Pacientes</span>
+          <span class="card-count-tag" id="queue-count-tag">Fila de Espera</span>
+        </div>
+        <div class="queue-clean-list" id="proximos-container">
+          <!-- Injetado dinamicamente -->
+        </div>
+      </section>
+
+      <!-- ÚLTIMO 1 CHAMADO -->
+      <section class="card-section">
+        <div class="card-title">
+          <span>Último Chamado</span>
+          <span class="card-count-tag">Chamada Anterior</span>
+        </div>
+        <div id="ultimo-container" style="display:flex;flex:1;min-height:0">
+          <!-- Injetado dinamicamente (apenas 1) -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // ── ESTADO DO PAINEL ──
+    let soundEnabled = true;
+    let voiceEnabled = true;
+    let audioContext = null;
+    let currentCallData = null;
+
+    const chamadasChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('instituto_chamadas_channel') : null;
+
+    // ── RELÓGIO DIGITAL ──
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+      
+      const clockEl = document.getElementById('live-clock');
+      const dateEl = document.getElementById('live-date');
+      if (clockEl) clockEl.textContent = timeStr;
+      if (dateEl) dateEl.textContent = dateStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── ÁUDIO DING-DONG HOSPITALAR ──
+    function initAudio() {
+      if (!audioContext) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) audioContext = new AudioCtx();
+      }
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+    }
+
+    function playDingDong() {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioContext) return;
+
+        function playTone(freq, startTime, duration, vol) {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          gain.gain.setValueAtTime(0.0001, startTime);
+          gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        }
+
+        const now = audioContext.currentTime;
+        playTone(659.25, now, 0.45, 0.45);        // Mi (E5)
+        playTone(523.25, now + 0.32, 0.95, 0.5);  // Dó (C5)
+      } catch (e) {
+        console.warn('Erro áudio:', e);
+      }
+    }
+
+    // ── SÍNTESE DE VOZ PT-BR ──
+    function speakCall(nome, consultorio, prioridade) {
+      if (!voiceEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+
+      try {
+        window.speechSynthesis.cancel();
+        const cleanNome = (nome || '').split('(')[0].trim();
+        const cleanSala = (consultorio || 'Consultório 01').split('—')[0].trim();
+        const prioTexto = (prioridade === 'Prioritário' || isPrioritario(cleanNome)) ? 'Atendimento prioritário. ' : '';
+
+        const texto = `Atenção. ${prioTexto}Paciente ${cleanNome}. Favor dirigir-se ao ${cleanSala}.`;
+        const utterance = new SpeechSynthesisUtterance(texto);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 0.92;
+        utterance.pitch = 1.0;
+
+        setTimeout(() => {
+          window.speechSynthesis.speak(utterance);
+        }, 850);
+      } catch (e) {
+        console.warn('Erro voz:', e);
+      }
+    }
+
+    // ── HELPERS DA FILA ──
+    function getHojeLocal() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function isPrioritario(perfil) {
+      if (!perfil) return false;
+      const p = String(perfil).toLowerCase();
+      return p.includes('tea') || p.includes('autismo') || p.includes('down') ||
+             p.includes('paralisia') || p.includes('defici') || p.includes('rara') ||
+             p.includes('idoso') || p.includes('criança') || p.includes('gestante') || p.includes('cadeir');
+    }
+
+    function getPrioridadeWeight(item) {
+      const prio = String(item.prioridade || '').toLowerCase();
+      const perf = String(item.perfil || '').toLowerCase();
+      if (prio.includes('prior') || prio.includes('pref')) return 1;
+      if (isPrioritario(perf)) return 1;
+      return 2;
+    }
+
+    function parseSenhaNum(senha) {
+      if (!senha) return 9999;
+      const m = String(senha).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 9999;
+    }
+
+    function ordenarFilaConsultas(lista) {
+      const statusOrder = { 'Chamando': 1, 'Em Atendimento': 2, 'Aguardando': 3, 'Confirmado': 3, 'Concluído': 4, 'Cancelado': 5 };
+      return [...lista].sort((a, b) => {
+        const sA = statusOrder[a.status] || 3;
+        const sB = statusOrder[b.status] || 3;
+        if (sA !== sB) return sA - sB;
+
+        if (sA <= 3 && sB <= 3) {
+          const pA = getPrioridadeWeight(a);
+          const pB = getPrioridadeWeight(b);
+          if (pA !== pB) return pA - pB;
+
+          const numA = a.numeroOrdem || parseSenhaNum(a.senha);
+          const numB = b.numeroOrdem || parseSenhaNum(b.senha);
+          if (numA !== numB) return numA - numB;
+
+          const hA = a.hora || a.periodo || '99:99';
+          const hB = b.hora || b.periodo || '99:99';
+          return String(hA).localeCompare(String(hB));
+        }
+        return 0;
+      });
+    }
+
+    function getConsultorioDaEspecialidade(nomeOrServ) {
+      if (!nomeOrServ) return 'Consultório 01';
+      try {
+        const meds = JSON.parse(localStorage.getItem('medicos') || '[]');
+        const s = String(nomeOrServ).toLowerCase();
+        const m = meds.find(x => x.nome.toLowerCase() === s || (x.especialidade && x.especialidade.toLowerCase().includes(s)));
+        if (m && m.sala) return m.sala;
+      } catch (e) {}
+      return 'Consultório 01';
+    }
+
+    function repararENormalizarAgendamentos() {
+      try {
+        let ags = JSON.parse(localStorage.getItem('agendamentos') || '[]');
+        const hoje = getHojeLocal();
+
+        if (!ags.length) {
+          ags = [
+            { id: 101, nome: 'Gabriel Pereira Nazareno', data: hoje, hora: '08:30', servico: 'Neuropediatria', prioridade: 'Prioritário', perfil: 'TEA', consultorio: 'Consultório 01', status: 'Aguardando' },
+            { id: 102, nome: 'Dona Helena Silveira Ramos', data: hoje, hora: '09:00', servico: 'Geriatria', prioridade: 'Prioritário', perfil: 'Idoso', consultorio: 'Consultório 03', status: 'Aguardando' },
+            { id: 103, nome: 'Lucas Albuquerque dos Santos', data: hoje, hora: '09:30', servico: 'Fisioterapia', prioridade: 'Normal', perfil: 'Adulto', consultorio: 'Consultório 02', status: 'Aguardando' },
+            { id: 104, nome: 'Beatriz Cristina Duarte', data: hoje, hora: '10:00', servico: 'Fonoaudiologia', prioridade: 'Normal', perfil: 'Criança', consultorio: 'Consultório 01', status: 'Aguardando' }
+          ];
+          localStorage.setItem('agendamentos', JSON.stringify(ags));
+        }
+
+        return ags;
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function getFilaDoDia() {
+      repararENormalizarAgendamentos();
+      const ags = JSON.parse(localStorage.getItem('agendamentos') || '[]');
+      const hoje = getHojeLocal();
+      const hojeLista = ags.filter(a => {
+        const d = a.data || a['c-data'] || a['t-data'];
+        return d === hoje;
+      });
+      return ordenarFilaConsultas(hojeLista);
+    }
+
+    // ── RENDERIZAR PRÓXIMOS PACIENTES (ATÉ 4 PARA CABER NA TELA) ──
+    function renderProximos() {
+      const container = document.getElementById('proximos-container');
+      const tagCount = document.getElementById('queue-count-tag');
+      if (!container) return;
+
+      const fila = getFilaDoDia();
+      const aguardando = fila.filter(a => {
+        const isEmAtendimento = a.status === 'Chamando' && currentCallData && (currentCallData.id == a.id || currentCallData.nome == a.nome);
+        return (a.status === 'Aguardando' || a.status === 'Confirmado') && !isEmAtendimento;
+      });
+
+      if (tagCount) {
+        tagCount.textContent = `${aguardando.length} aguardando`;
+      }
+
+      if (!aguardando.length) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.9rem">
+            Nenhum paciente aguardando na fila no momento.
+          </div>
+        `;
+        return;
+      }
+
+      const proximos = aguardando.slice(0, 4);
+      container.innerHTML = proximos.map((item, idx) => {
+        const isPrio = item.prioridade === 'Prioritário' || getPrioridadeWeight(item) === 1;
+        const prioClass = isPrio ? 'prio' : 'normal';
+        const prioTag = isPrio ? `<span class="queue-item-prio-tag">Prioritário</span>` : '';
+
+        return `
+          <div class="queue-clean-item ${prioClass}">
+            <div class="queue-item-left">
+              <span class="queue-item-num">#${idx + 1}</span>
+              <span class="queue-item-name">${item.nome}</span>
+            </div>
+            ${prioTag}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── RENDERIZAR ÚLTIMO 1 CHAMADO ──
+    function renderUltimoChamado() {
+      const container = document.getElementById('ultimo-container');
+      if (!container) return;
+
+      const hist = JSON.parse(localStorage.getItem('instituto_historico_chamadas') || '[]');
+
+      let anterior = null;
+      if (currentCallData) {
+        anterior = hist.find(item => item.nome !== currentCallData.nome || item.timestamp !== currentCallData.timestamp);
+      } else if (hist.length > 0) {
+        anterior = hist[0];
+      }
+
+      if (!anterior) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.9rem;margin:auto">
+            Nenhuma chamada anterior registrada hoje.
+          </div>
+        `;
+        return;
+      }
+
+      const salaLimpa = (anterior.consultorio || 'Consultório 01').split('—')[0].trim();
+
+      container.innerHTML = `
+        <div class="last-called-card">
+          <div class="last-called-label">Chamado Anteriormente</div>
+          <div class="last-called-name">${anterior.nome}</div>
+          <div class="last-called-room">${salaLimpa}</div>
+        </div>
+      `;
+    }
+
+    // ── EXIBIR A CHAMADA ATIVA (FOCO NO NOME GIGANTE E SALA) ──
+    function displayCall(call, isNew = true) {
+      currentCallData = call;
+
+      const nameEl = document.getElementById('disp-patient-name');
+      const salaEl = document.getElementById('disp-consultorio');
+      const stageCard = document.getElementById('call-stage-card');
+      const prioBadgeEl = document.getElementById('disp-prioridade-badge');
+
+      const isPrio = call.prioridade === 'Prioritário' || isPrioritario(call.perfil || call.nome);
+
+      if (nameEl) nameEl.textContent = call.nome || 'Paciente';
+      if (salaEl) salaEl.textContent = (call.consultorio || 'Consultório 01').split('—')[0].trim();
+
+      if (prioBadgeEl) {
+        prioBadgeEl.style.display = isPrio ? 'inline-block' : 'none';
+      }
+
+      if (isNew && stageCard) {
+        stageCard.classList.remove('flash');
+        void stageCard.offsetWidth;
+        stageCard.classList.add('flash');
+      }
+
+      if (isNew) {
+        playDingDong();
+        speakCall(call.nome, call.consultorio, isPrio ? 'Prioritário' : 'Normal');
+      }
+
+      renderProximos();
+      renderUltimoChamado();
+    }
+
+    // ── CHAMAR PRÓXIMO DA FILA ──
+    function chamarProximoDaFila() {
+      initAudio();
+      const fila = getFilaDoDia();
+      const proximo = fila.find(a => a.status === 'Aguardando' || a.status === 'Confirmado');
+
+      if (!proximo) {
+        alert('Não há pacientes aguardando na fila de hoje.');
+        return;
+      }
+
+      let ags = JSON.parse(localStorage.getItem('agendamentos') || '[]');
+      const ag = ags.find(a => a.id == proximo.id);
+      if (ag) {
+        ag.status = 'Chamando';
+        ag.horaChamada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        localStorage.setItem('agendamentos', JSON.stringify(ags));
+      }
+
+      const consultorio = proximo.consultorio || getConsultorioDaEspecialidade(proximo.profissional || proximo.servico);
+      const isPrio = proximo.prioridade === 'Prioritário' || isPrioritario(proximo.perfil);
+
+      const payload = {
+        id: proximo.id,
+        nome: proximo.nome,
+        consultorio: consultorio,
+        prioridade: isPrio ? 'Prioritário' : 'Normal',
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: Date.now()
+      };
+
+      localStorage.setItem('instituto_chamada_ativa', JSON.stringify(payload));
+      localStorage.setItem('instituto_chamada_timestamp', String(Date.now()));
+
+      const hist = JSON.parse(localStorage.getItem('instituto_historico_chamadas') || '[]');
+      hist.unshift(payload);
+      localStorage.setItem('instituto_historico_chamadas', JSON.stringify(hist.slice(0, 30)));
+
+      if (chamadasChannel) {
+        chamadasChannel.postMessage({ type: 'CHAMAR_PACIENTE', data: payload });
+      }
+
+      displayCall(payload, true);
+    }
+
+    // ── ESCUTADORES EM TEMPO REAL ──
+    if (chamadasChannel) {
+      chamadasChannel.onmessage = (event) => {
+        if (event.data && (event.data.type === 'CHAMAR_PACIENTE' || event.data.type === 'NOVA_CHAMADA')) {
+          displayCall(event.data.data, true);
+        } else if (event.data && (event.data.type === 'NOVO_AGENDAMENTO' || event.data.type === 'ATUALIZAR_FILA')) {
+          renderProximos();
+        } else if (event.data && event.data.type === 'LIMPAR_CHAMADA') {
+          const nameEl = document.getElementById('disp-patient-name');
+          const salaEl = document.getElementById('disp-consultorio');
+          const prioBadgeEl = document.getElementById('disp-prioridade-badge');
+          if (nameEl) nameEl.textContent = 'Aguardando Chamada';
+          if (salaEl) salaEl.textContent = 'Painel da TV';
+          if (prioBadgeEl) prioBadgeEl.style.display = 'none';
+          renderProximos();
+          renderUltimoChamado();
+        }
+      };
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'instituto_chamada_timestamp' || e.key === 'instituto_chamada_ativa') {
+        try {
+          const raw = localStorage.getItem('instituto_chamada_ativa');
+          if (raw) {
+            displayCall(JSON.parse(raw), true);
+          } else {
+            const nameEl = document.getElementById('disp-patient-name');
+            const salaEl = document.getElementById('disp-consultorio');
+            const prioBadgeEl = document.getElementById('disp-prioridade-badge');
+            if (nameEl) nameEl.textContent = 'Aguardando Chamada';
+            if (salaEl) salaEl.textContent = 'Painel da TV';
+            if (prioBadgeEl) prioBadgeEl.style.display = 'none';
+            renderProximos();
+            renderUltimoChamado();
+          }
+        } catch (err) {}
+      } else if (e.key === 'instituto_novo_agendamento_timestamp' || e.key === 'agendamentos') {
+        renderProximos();
+      }
+    });
+
+    // ── CONTROLES DO USUÁRIO ──
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      initAudio();
+      const icon = document.getElementById('sound-icon');
+      if (icon) icon.textContent = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) playDingDong();
+    }
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      const icon = document.getElementById('voice-icon');
+      if (icon) icon.textContent = voiceEnabled ? '🗣️' : '🤐';
+      if (voiceEnabled && currentCallData) {
+        speakCall(currentCallData.nome, currentCallData.consultorio, currentCallData.prioridade);
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    // ── INICIALIZAÇÃO NA CARGA ──
+    document.addEventListener('DOMContentLoaded', () => {
+      repararENormalizarAgendamentos();
+
+      try {
+        const raw = localStorage.getItem('instituto_chamada_ativa');
+        if (raw) {
+          const last = JSON.parse(raw);
+          displayCall(last, false);
+        } else {
+          const fila = getFilaDoDia();
+          if (fila.length) {
+            const p = fila[0];
+            displayCall({
+              id: p.id,
+              nome: p.nome,
+              prioridade: p.prioridade,
+              consultorio: p.consultorio || 'Consultório 01'
+            }, false);
+          } else {
+            renderProximos();
+            renderUltimoChamado();
+          }
+        }
+      } catch (e) {
+        renderProximos();
+        renderUltimoChamado();
+      }
+
+      document.body.addEventListener('click', () => {
+        initAudio();
+      }, { once: true });
+    });
+  </script>
+</body>
+</html>
